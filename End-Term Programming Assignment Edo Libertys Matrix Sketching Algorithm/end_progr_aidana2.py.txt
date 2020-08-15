@@ -1,0 +1,63 @@
+import sys
+import argparse
+import numpy as np
+import time
+import math
+import matplotlib.pyplot as plt
+import cv2
+import os
+from numpy import linalg
+
+def Frobenious_Norm(data_matrix):
+  u, s, vh = np.linalg.svd(data_matrix, full_matrices=False)
+  return sum(map(lambda i : i * i, s))
+
+# Edo Liberty's Matrix Sketch will have the same number of rows
+#as the original data; the #cols is ceil(2.0/epsilon)
+
+def Matrix_Sketch(Data, epsilon):
+  cols_of_sketch = math.ceil(2.0/epsilon)
+  B = Data[:Data.shape[0], :cols_of_sketch]
+  for i in range(Data.shape[1]-cols_of_sketch-1):
+    if B[:,-1].sum() == 0:
+      B[:,-1] = Data[:, cols_of_sketch+1+i]
+
+    u, s, vh = np.linalg.svd(B, full_matrices=False)
+    s[-1] = 0
+    smat = np.diag(s)
+    B = np.dot(u, smat)
+  
+  return B
+
+
+
+dimension = int(sys.argv[1])
+no_of_data_points = int(sys.argv[2])
+epsilon = float(sys.argv[3])
+input_file = sys.argv[4]
+output_file = sys.argv[5]
+
+print("Edo Liberty's Matrix Sketching Algorithm")
+print("----------------------------------------")
+print("Original Data-Matrix has ", dimension, "-rows and ", no_of_data_points, "-cols")
+print("Epsilon = ", epsilon, " (i.e. max. of ", 100*epsilon, "% reduction of  Frobenius-Norm of the Sketch Matrix)")
+print("Input File = ", input_file)
+
+#reading data
+Data = np.loadtxt(input_file)
+
+
+#Compute the Frobenius-Norm of the original Data-Matrix
+Data_Forbenius_Norm = Frobenious_Norm(Data);
+print("Frobenius Norm of the (", Data.shape[0], " x ", Data.shape[1], ") Data Matrix = ", Data_Forbenius_Norm)
+    
+Sketch = Matrix_Sketch(Data, epsilon);
+Sketch_Forbenius_Norm = Frobenious_Norm(Sketch);
+print("Frobenius Norm of the (", Sketch.shape[0], " x ", Sketch.shape[1], ") Sketch Matrix = ", Sketch_Forbenius_Norm)
+print("Change in Frobenius-Norm between Sketch & Original  = ", 100*(Sketch_Forbenius_Norm - Data_Forbenius_Norm)/Data_Forbenius_Norm)
+
+with open(output_file,'wb') as f:
+    for line in Sketch:
+        np.savetxt(f, line, fmt='%.2f')
+
+#print("File `", argv[5], "' contains a (", Sketch.shape[0], " x ", Sketch.shape[1], ") Matrix-Sketch")
